@@ -1,0 +1,9 @@
+build/
+cmake-build-*/
+libs/
+.DS_Store
+*.xcodeproj
+.vscode/
+.idea/
+Soulful-Sauce-mac.zip
+/Soulful Sauce/

@@ -1,0 +1,32 @@
+JUST FEEZY SOULFUL SAUCE - Mac install
+=======================================
+
+What's in this folder
+  Soulful Sauce.vst3          the VST3 plugin (use this one in FL Studio)
+  Soulful Sauce.component     the Audio Unit version
+  Soulful Sauce.app           a standalone app for trying it without FL Studio
+  Install Soulful Sauce.command   installs the two plugins for you
+
+Install
+  1. Right-click "Install Soulful Sauce.command" and choose Open, then Open again.
+     (A double-click gets blocked the first time because this test build isn't
+     signed with a paid Apple developer account yet.)
+  2. A Terminal window shows where it installed the plugins. Press any key to close it.
+  3. In FL Studio: Options > Manage plugins > Find more plugins.
+  4. Add "Soulful Sauce" (Just Feezy) to a channel like any instrument.
+
+If macOS still says the plugin "is damaged" or "can't be opened", open Terminal and run:
+  xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/VST3/"Soulful Sauce.vst3"
+  xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/Components/"Soulful Sauce.component"
+then rescan plugins in FL Studio.
+
+Using it
+  - Pick Key, Style and Mood, then hit Re-roll until you like the progression.
+    The arrows next to Re-roll step back and forward through earlier progressions.
+  - Click a chord card to hear it. The lock keeps that chord when you re-roll.
+  - Press Play in FL Studio and the chords follow your song's tempo and position.
+    With FL stopped, the plugin's own Play button previews the loop.
+  - Drag MIDI: drag it straight into FL's piano roll or playlist.
+    Click it instead to save the .mid file somewhere.
+  - The settings button (top right) has Bass note, Send MIDI out and Volume.
+    Set Sound to Off if you only want the MIDI.

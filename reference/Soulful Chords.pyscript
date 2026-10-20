@@ -1,0 +1,566 @@
+# ---------------------------------------------------------------------------
+#  Soulful Chords  -  FL Studio piano roll script
+#
+#  Generates soulful chord progressions (deep house, soulful house, neo-soul,
+#  gospel, jazzy lounge, afro soul) straight into the piano roll, with
+#  voice-led extended voicings, house rhythms, humanising and chord names.
+#
+#  INSTALL (Mac):
+#    Put this file in:
+#      ~/Documents/Image-Line/FL Studio/Settings/Piano roll scripts/
+#    Then open a piano roll and choose it from the Scripts menu
+#    (or Tools > Scripting). No Python install needed - FL runs it itself.
+#
+#  WORKFLOW:
+#    - The dialog previews live. Turn "Variation" to re-roll a new progression.
+#    - Mood: Mellow / Chilled = lusher, softer, sus chords, rolled and warm;
+#            Happy / Uplifting = brighter major moves, V9 lifts, 6/9 tonics.
+#    - Same Variation number = same progression, so you can come back to one.
+#    - Select a range on the piano roll timeline first to start chords there.
+#    - Each chord's notes are grouped, so dragging one note moves the chord.
+#    - Bass notes are a different colour so they're easy to spot and move.
+# ---------------------------------------------------------------------------
+
+import flpianoroll as flp
+
+NOTE_NAMES = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B']
+
+STYLE_NAMES = [
+    'Deep House (minor)',
+    'Soulful House',
+    'Neo-Soul',
+    'Gospel',
+    'Jazzy Lounge',
+    'Afro Soul (dorian)',
+]
+
+MOOD_NAMES = ['Balanced', 'Mellow / Chilled', 'Happy / Uplifting']
+
+# Progression templates per style. Token = "degree:family[/bass degree]".
+# Degrees are relative to the major scale of the key (b = flat, # = sharp).
+# Families: M = major 7th type, m = minor 7th type, D = dominant,
+#           X = altered dominant, S = sus dominant, h = half-diminished,
+#           o = diminished 7th, 6 = major 6/9
+# Mood tags: m = fits Mellow, h = fits Happy, * = only used by a mood
+#            (Balanced uses every template without a *).
+TEMPLATES = [
+    # Deep House (minor)
+    [
+        ('mh', ['1:m', '4:m', 'b7:S', 'b3:M']),
+        ('m',  ['1:m', 'b6:M', '4:m', '5:m']),
+        ('m',  ['4:m', '5:m', 'b3:M', '1:m']),
+        ('m',  ['1:m', '1:m', '4:m', 'b7:S']),
+        ('h',  ['b6:M', 'b7:S', '1:m', '5:X']),
+        ('mh', ['1:m', 'b3:M', '4:m', 'b6:M']),
+        ('',   ['2:h', '5:X', '1:m', '1:m']),
+        ('m',  ['1:m', 'b7:M', 'b6:M', '5:m']),
+        ('h*', ['b3:M', 'b6:M', 'b7:S', 'b3:M']),
+        ('h*', ['b6:M', 'b7:S', 'b3:M', 'b3:M']),
+        ('h*', ['4:m', 'b7:S', 'b3:M', 'b6:M']),
+    ],
+    # Soulful House (major)
+    [
+        ('mh', ['4:M', '3:m', '2:m', '1:M']),
+        ('h',  ['2:m', '3:m', '4:M', '5:S']),
+        ('h',  ['1:M', '6:m', '2:m', '5:S']),
+        ('mh', ['4:M', '5:S', '3:m', '6:m']),
+        ('h',  ['1:M', '3:D', '6:m', '4:M']),
+        ('m',  ['4:M', '4:m', '1:M', '6:D']),
+        ('m',  ['6:m', '2:m', '4:M', '5:S']),
+        ('h',  ['1:M', '2:m', '3:m', '4:M']),
+        ('m*', ['1:M', '4:M', '1:M', '4:M']),
+        ('m*', ['6:m', '4:M', '6:m', '4:M']),
+        ('m*', ['2:m', '3:m', '2:m', '1:M']),
+        ('h*', ['4:M', '5:D', '3:m', '6:D']),
+        ('h*', ['1:M', '4:M', '5:S', '1:M']),
+    ],
+    # Neo-Soul
+    [
+        ('m',  ['4:M', '3:m', 'b3:M', '2:m']),
+        ('m',  ['1:M', 'b7:D', '4:M', '4:m']),
+        ('',   ['2:m', 'b2:D', '1:M', '6:X']),
+        ('m',  ['6:m', '2:m', 'b6:M', '5:S']),
+        ('h',  ['4:M', 'b7:D', '3:m', '6:D']),
+        ('h',  ['3:m', '6:D', '2:m', '5:D']),
+        ('m',  ['3:m', 'b3:o', '2:m', '5:S']),
+        ('m*', ['2:m', '5:S', '2:m', '5:S']),
+        ('m*', ['1:M', '3:m', '4:M', '4:m']),
+        ('h*', ['1:M', '6:D', '2:m', '5:D']),
+        ('h*', ['4:M', '5:D', '3:D', '6:m']),
+        ('h*', ['1:M', '2:m', '3:m', '6:D']),
+    ],
+    # Gospel
+    [
+        ('h',  ['1:M', '4:M', '#4:o', '1:M/5']),
+        ('h',  ['1:M/5', '6:X', '2:m', '5:S']),
+        ('mh', ['1:M', '1:D/3', '4:M', '4:m']),
+        ('h',  ['3:m', '6:X', '2:m', '5:D']),
+        ('h',  ['4:M', '#4:o', '1:M/5', '6:X']),
+        ('h',  ['2:m', '5:S', '1:M', '1:D']),
+        ('m',  ['4:M', '4:m', '3:m', '6:X']),
+        ('m*', ['4:M', '3:m', '6:m', '2:m']),
+        ('m*', ['1:M', '4:M/1', '1:M', '4:M/1']),
+        ('m*', ['6:m', '5:m', '4:M', '4:m']),
+    ],
+    # Jazzy Lounge
+    [
+        ('h',  ['2:m', '5:D', '1:M', '6:X']),
+        ('h',  ['1:M', '6:m', '2:m', '5:D']),
+        ('m',  ['3:m', 'b3:D', '2:m', 'b2:D']),
+        ('m',  ['4:m', 'b7:D', '1:M', '6:X']),
+        ('h',  ['1:6', '6:X', '2:m', '5:D']),
+        ('',   ['3:h', '6:X', '2:m', '5:X']),
+        ('m*', ['1:M', '4:M', '3:m', '6:m']),
+        ('m*', ['2:m', '5:S', '1:M', '1:6']),
+        ('h*', ['1:M', '3:D', '4:M', '5:D']),
+    ],
+    # Afro Soul (dorian)
+    [
+        ('mh', ['1:m', '4:D', '1:m', '4:D']),
+        ('m',  ['1:m', '2:m', 'b3:M', '2:m']),
+        ('m',  ['1:m', 'b7:M', 'b6:M', 'b7:M']),
+        ('h',  ['1:m', '4:D', 'b7:M', 'b3:M']),
+        ('mh', ['b3:M', '4:D', '1:m', '1:m']),
+        ('m',  ['1:m', '5:m', '4:D', '1:m']),
+        ('h*', ['b3:M', '4:D', 'b7:M', 'b3:M']),
+        ('h*', ['b7:M', 'b3:M', '4:D', '1:m']),
+    ],
+]
+
+
+def template_pool(style, mood):
+    if mood == 1:
+        return [t for tag, t in TEMPLATES[style] if 'm' in tag]
+    if mood == 2:
+        return [t for tag, t in TEMPLATES[style] if 'h' in tag]
+    return [t for tag, t in TEMPLATES[style] if '*' not in tag]
+
+# Chord qualities per family at Richness 1 / 2 / 3: (name suffix, intervals)
+QUALITIES = {
+    'M': [('maj7', (0, 4, 7, 11)), ('maj9', (0, 4, 7, 11, 14)), ('maj13', (0, 4, 7, 11, 14, 21))],
+    'm': [('m7', (0, 3, 7, 10)), ('m9', (0, 3, 7, 10, 14)), ('m11', (0, 3, 7, 10, 14, 17))],
+    'D': [('7', (0, 4, 7, 10)), ('9', (0, 4, 7, 10, 14)), ('13', (0, 4, 7, 10, 14, 21))],
+    'X': [('7', (0, 4, 7, 10)), ('7b9', (0, 4, 7, 10, 13)), ('7#9b13', (0, 4, 10, 15, 20))],
+    'S': [('7sus4', (0, 5, 7, 10)), ('9sus4', (0, 5, 7, 10, 14)), ('13sus4', (0, 5, 7, 10, 14, 21))],
+    'h': [('m7b5', (0, 3, 6, 10)), ('m9b5', (0, 3, 6, 10, 14)), ('m11b5', (0, 3, 6, 10, 14, 17))],
+    'o': [('dim7', (0, 3, 6, 9)), ('dim7', (0, 3, 6, 9)), ('dim7', (0, 3, 6, 9))],
+    '6': [('6', (0, 4, 7, 9)), ('6/9', (0, 4, 7, 9, 14)), ('6/9', (0, 4, 7, 9, 14))],
+}
+
+DEGREES = {'1': 0, '2': 2, '3': 4, '4': 5, '5': 7, '6': 9, '7': 11}
+
+MAJOR_STYLES = (1, 2, 3, 4)     # Soulful House, Neo-Soul, Gospel, Jazzy Lounge
+
+# Rhythm patterns in 16th steps per bar: (start step, length in steps)
+PATTERNS = {
+    2: [(0, 2), (3, 2), (6, 2), (10, 2), (12, 3)],   # House stabs
+    3: [(2, 2), (6, 2), (10, 2), (14, 2)],           # Offbeat organ
+}
+
+
+# ---------------------------------------------------------------------------
+#  Small deterministic random generator (same Variation = same result)
+# ---------------------------------------------------------------------------
+class Rng:
+    def __init__(self, seed):
+        self.s = (int(seed) * 2654435761 + 1013904223) & 0xFFFFFFFF
+
+    def rand(self):
+        self.s = (self.s + 0x6D2B79F5) & 0xFFFFFFFF
+        t = self.s
+        t = ((t ^ (t >> 15)) * (t | 1)) & 0xFFFFFFFF
+        t ^= (t + (((t ^ (t >> 7)) * (t | 61)) & 0xFFFFFFFF)) & 0xFFFFFFFF
+        return ((t ^ (t >> 14)) & 0xFFFFFFFF) / 4294967296.0
+
+    def pick(self, seq):
+        return seq[int(self.rand() * len(seq)) % len(seq)]
+
+
+# ---------------------------------------------------------------------------
+#  Harmony
+# ---------------------------------------------------------------------------
+def parse_degree(tok):
+    shift = 0
+    while tok and tok[0] in 'b#':
+        shift += -1 if tok[0] == 'b' else 1
+        tok = tok[1:]
+    return (DEGREES[tok] + shift) % 12
+
+
+def parse_chord(token):
+    bass = None
+    if '/' in token:
+        token, b = token.split('/')
+        bass = parse_degree(b)
+    deg, fam = token.split(':')
+    return {'root': parse_degree(deg), 'fam': fam, 'bass': bass, 'rich': 0}
+
+
+def build_progression(style, n_chords, spice, rng, mood=0):
+    templates = template_pool(style, mood)
+    chords = []
+    last = None
+    while len(chords) < n_chords:
+        # Repeat the previous phrase half the time (A A'), otherwise a new one
+        if last is not None and rng.rand() < 0.5:
+            t = last
+        else:
+            t = rng.pick(templates)
+        last = t
+        chords.extend(parse_chord(x) for x in t)
+    chords = chords[:n_chords]
+
+    first = chords[0]
+    for i, c in enumerate(chords):
+        nxt = chords[i + 1] if i + 1 < len(chords) else None
+        r = [rng.rand() for _ in range(6)]   # fixed draw count keeps seeds stable
+        if i == 0:
+            continue
+        if c['fam'] in ('D', 'X') and r[0] < spice * 0.45:
+            # Tritone substitution
+            c['root'] = (c['root'] + 6) % 12
+            c['fam'] = 'D'
+            c['bass'] = None
+        elif c['fam'] == 'M' and c['root'] == 5 and mood != 2 and r[1] < spice * 0.4:
+            # Borrowed minor iv
+            c['fam'] = 'm'
+        elif c['fam'] == 'M' and r[2] < spice * 0.2:
+            # Relative minor swap
+            c['root'] = (c['root'] + 9) % 12
+            c['fam'] = 'm'
+            c['bass'] = None
+        elif (c['fam'] == 'm' and nxt is not None
+              and (nxt['root'] - c['root']) % 12 == 5 and r[3] < spice * 0.35):
+            # Secondary dominant into the next chord
+            c['fam'] = 'X' if nxt['fam'] in ('m', 'h') else 'D'
+            c['bass'] = None
+        elif c['fam'] == 'D' and r[4] < spice * 0.3:
+            c['fam'] = 'S'
+        lush = 0.3 if mood == 1 else 0.0          # mellow leans lusher
+        if r[5] < spice * 0.35 + lush:
+            c['rich'] = 1   # one notch richer than the Richness knob
+
+    # Turnaround back to the top of the loop
+    if len(chords) >= 4:
+        r1, r2 = rng.rand(), rng.rand()
+        if r1 < spice * 0.6:
+            rich = chords[-1]['rich']
+            if r2 < 0.3:
+                chords[-1] = {'root': (first['root'] + 1) % 12, 'fam': 'D', 'bass': None, 'rich': rich}
+            else:
+                minor_home = first['fam'] in ('m', 'h')
+                fam = 'X' if minor_home else 'S'
+                if mood == 2 and not minor_home:
+                    fam = 'D'                      # happy: a straight V9 lift
+                chords[-1] = {'root': (first['root'] + 7) % 12,
+                              'fam': fam, 'bass': None, 'rich': rich}
+
+    if mood == 1:
+        # Mellow: soften tension - altered dominants become sus chords
+        for c in chords:
+            if c['fam'] == 'X':
+                c['fam'] = 'S'
+    elif mood == 2:
+        # Happy: sus chords resolve forward as dominants, tonic gets a bright 6/9
+        for i, c in enumerate(chords):
+            r = rng.rand()
+            if c['fam'] == 'S' and r < 0.5:
+                c['fam'] = 'D'
+            elif (style in MAJOR_STYLES and c['fam'] == 'M' and c['root'] == 0
+                  and c['bass'] is None and r < 0.5):
+                c['fam'] = '6'
+    return chords
+
+
+def chord_info(key, c, richness, mood=0):
+    level = max(1, min(3, richness + c['rich'])) - 1
+    if mood == 2 and c['fam'] in ('m', 'h'):
+        level = min(level, 1)                # happy: 9ths, not darker 11ths
+    suffix, intervals = QUALITIES[c['fam']][level]
+    root_pc = (key + c['root']) % 12
+    bass_pc = (key + (c['bass'] if c['bass'] is not None else c['root'])) % 12
+    name = NOTE_NAMES[root_pc] + suffix
+    if bass_pc != root_pc:
+        name += '/' + NOTE_NAMES[bass_pc]
+    return name, root_pc, bass_pc, intervals
+
+
+def upper_pcs(root_pc, bass_pc, intervals, bass_on):
+    pcs = []
+    for iv in intervals:
+        pc = (root_pc + iv) % 12
+        if pc not in pcs:
+            pcs.append(pc)
+    if bass_on and bass_pc in pcs and len(pcs) > 3:
+        pcs.remove(bass_pc)                  # rootless voicing over the bass
+    fifth = (root_pc + 7) % 12
+    if len(pcs) > 4 and fifth in pcs:
+        pcs.remove(fifth)                    # thin out the 5th on big chords
+    return pcs
+
+
+# ---------------------------------------------------------------------------
+#  Voicing and voice-leading
+# ---------------------------------------------------------------------------
+def spread_voicing(notes, mode):
+    v = sorted(notes)
+    if mode >= 1 and len(v) >= 4:
+        v[-2] -= 12                          # drop 2
+        if mode == 2 and len(v) >= 5:
+            v[-4] -= 12                      # drop 2 & 4 (wide)
+        v.sort()
+    return v
+
+
+def candidate_voicings(pcs, mode, low, high):
+    cands = []
+    seen = set()
+    n = len(pcs)
+    ordered = sorted(pcs)
+    for r in range(n):
+        order = ordered[r:] + ordered[:r]
+        for base in range(low - 12, high):
+            if base % 12 != order[0]:
+                continue
+            notes = [base]
+            for pc in order[1:]:
+                nx = notes[-1] + 1
+                while nx % 12 != pc:
+                    nx += 1
+                notes.append(nx)
+            v = spread_voicing(notes, mode)
+            if v[0] < low or v[-1] > high:
+                continue
+            if v[1] - v[0] < 3 and v[0] < 57:
+                continue                     # avoid muddy low clusters
+            key = tuple(v)
+            if key not in seen:
+                seen.add(key)
+                cands.append(v)
+    return cands
+
+
+def voicing_cost(v, prev, center):
+    cost = abs(sum(v) / len(v) - center) * 0.35
+    if prev:
+        d = sum(min(abs(a - b) for b in prev) for a in v)
+        d += sum(min(abs(a - b) for a in v) for b in prev)
+        cost += d * 0.5 + abs(v[-1] - prev[-1]) * 0.6
+    else:
+        cost += abs(v[-1] - (center + 8)) * 0.3
+    if v[-1] - v[-2] == 1:
+        cost += 3                            # semitone rub on the top
+    if v[1] - v[0] == 1 and v[0] < 62:
+        cost += 2                            # semitone rub low in the chord
+    return cost
+
+
+def choose_voicing(pcs, mode, octave, prev, register=0):
+    shift = octave * 12 + register
+    low = [52, 47, 44][mode] + shift
+    high = 81 + shift
+    center = 63 + shift
+    cands = candidate_voicings(pcs, mode, low, high)
+    if not cands:
+        cands = candidate_voicings(pcs, 0, low - 6, high + 6)
+    if not cands:
+        base = 60 + shift
+        return sorted(base + ((pc - base) % 12) for pc in pcs)
+    return min(cands, key=lambda v: voicing_cost(v, prev, center))
+
+
+# ---------------------------------------------------------------------------
+#  Dialog
+# ---------------------------------------------------------------------------
+def createDialog():
+    form = flp.ScriptDialog(
+        'Soulful Chords',
+        'Soulful chord progressions with voice-led voicings. '
+        'Turn Variation to re-roll; Spice adds substitutions and turnarounds.')
+    form.AddInputCombo('Key', ','.join(NOTE_NAMES), 9)
+    form.AddInputCombo('Style', ','.join(STYLE_NAMES), 0)
+    form.AddInputCombo('Mood', ','.join(MOOD_NAMES), 0)
+    form.AddInputKnobInt('Variation', 1, 1, 500)
+    form.AddInputCombo('Bars', '4,8,16', 1)
+    form.AddInputCombo('Chord length', '1 bar,2 bars,Half bar', 0)
+    form.AddInputCombo('Rhythm', 'Sustained pads,Pushed (anticipated),House stabs,Offbeat organ', 0)
+    form.AddInputCombo('Voicing', 'Smooth (close),Spread (drop 2),Wide (open)', 0)
+    form.AddInputKnobInt('Richness', 2, 1, 3)
+    form.AddInputKnob('Spice', 0.3, 0.0, 1.0)
+    form.AddInputKnobInt('Octave', 0, -2, 2)
+    form.AddInputCombo('Bass note', 'Root sustained,Follow rhythm,Off', 0)
+    form.AddInputKnob('Velocity', 0.72, 0.2, 1.0)
+    form.AddInputKnob('Humanize', 0.35, 0.0, 1.0)
+    form.AddInputKnob('Strum', 0.1, 0.0, 1.0)
+    form.AddInputCombo('Existing notes', 'Replace,Keep', 0)
+    form.AddInputCombo('Chord names', 'Show as markers,Off', 0)
+    return form
+
+
+# ---------------------------------------------------------------------------
+#  Writing notes
+# ---------------------------------------------------------------------------
+def next_group():
+    try:
+        return flp.score.getNextFreeGroupIndex()
+    except Exception:
+        return 0
+
+
+def add_note(number, time, length, velocity, color, group):
+    n = flp.Note()
+    n.number = max(0, min(127, int(number)))
+    n.time = max(0, int(time))
+    n.length = max(1, int(length))
+    n.velocity = max(0.02, min(1.0, velocity))
+    n.color = color
+    if group:
+        try:
+            n.group = group
+        except Exception:
+            pass
+    flp.score.addNote(n)
+
+
+def apply(form):
+    key = int(form.GetInputValue('Key'))
+    style = int(form.GetInputValue('Style'))
+    mood = int(form.GetInputValue('Mood'))
+    seed = int(round(form.GetInputValue('Variation')))
+    bars = [4, 8, 16][int(form.GetInputValue('Bars'))]
+    length_mode = int(form.GetInputValue('Chord length'))
+    rhythm = int(form.GetInputValue('Rhythm'))
+    voicing_mode = int(form.GetInputValue('Voicing'))
+    richness = int(round(form.GetInputValue('Richness')))
+    spice = float(form.GetInputValue('Spice'))
+    octave = int(round(form.GetInputValue('Octave')))
+    bass_mode = int(form.GetInputValue('Bass note'))
+    base_vel = float(form.GetInputValue('Velocity'))
+    humanize = float(form.GetInputValue('Humanize'))
+    strum = float(form.GetInputValue('Strum'))
+    replace = int(form.GetInputValue('Existing notes')) == 0
+    markers_on = int(form.GetInputValue('Chord names')) == 0
+
+    # --- mood feel: mellow = softer, lower, rolled; happy = brighter, higher, tighter ---
+    register = 0
+    if mood == 1:
+        base_vel *= 0.85
+        strum = min(1.0, strum + 0.15)
+        register = -2
+    elif mood == 2:
+        base_vel = min(1.0, base_vel * 1.08)
+        strum *= 0.6
+        register = 3
+
+    # --- timing grid ---
+    ppq = flp.score.PPQ
+    try:
+        tsnum, tsden = int(flp.score.tsnum), int(flp.score.tsden)
+    except Exception:
+        tsnum, tsden = 4, 4
+    if tsnum <= 0 or tsden <= 0:
+        tsnum, tsden = 4, 4
+    bar_ticks = int(ppq * 4 * tsnum / tsden)
+    step = max(1, ppq // 4)
+    bar_steps = max(1, bar_ticks // step)
+
+    start_tick = 0
+    try:
+        sel_start, sel_end = flp.score.getTimelineSelection()
+        if sel_end > sel_start >= 0:
+            start_tick = sel_start
+    except Exception:
+        pass
+
+    if length_mode == 1:
+        span, n_chords = bar_ticks * 2, max(1, bars // 2)
+    elif length_mode == 2:
+        span, n_chords = bar_ticks // 2, bars * 2
+    else:
+        span, n_chords = bar_ticks, bars
+    span_steps = max(1, span // step)
+
+    # --- clear ---
+    if replace:
+        flp.score.clearNotes(True)
+        if markers_on:
+            try:
+                for i in range(flp.score.markerCount - 1, -1, -1):
+                    if flp.score.getMarker(i).mode == 0:
+                        flp.score.deleteMarker(i)
+            except Exception:
+                pass
+
+    # --- harmony (own random stream so feel knobs never change the chords) ---
+    harmony_rng = Rng(seed * 101 + style * 7 + 1)
+    feel_rng = Rng(seed * 7919 + 17)
+    chords = build_progression(style, n_chords, spice, harmony_rng, mood)
+
+    bass_on = bass_mode != 2
+    push = ppq // 2 if rhythm == 1 else 0
+    prev = None
+
+    for i, c in enumerate(chords):
+        name, root_pc, bass_pc, intervals = chord_info(key, c, richness, mood)
+        pcs = upper_pcs(root_pc, bass_pc, intervals, bass_on)
+        voicing = choose_voicing(pcs, voicing_mode, octave, prev, register)
+        prev = voicing
+
+        t0 = start_tick + i * span
+        t1 = t0 + span
+        if push:
+            if i > 0:
+                t0 -= push
+            if i < len(chords) - 1:
+                t1 -= push
+        chord_len = t1 - t0
+
+        # Rhythm events relative to the chord start: (offset ticks, length ticks, accent)
+        if rhythm in PATTERNS:
+            events = []
+            for bar_off in range(0, span_steps, bar_steps):
+                for p, l in PATTERNS[rhythm]:
+                    s = bar_off + p
+                    if s < span_steps:
+                        events.append((s * step, min(l, span_steps - s) * step, p == 0))
+        else:
+            events = [(0, chord_len, True)]
+
+        group = next_group()
+
+        # Bass note
+        bass_note = 36 + bass_pc + max(-1, min(1, octave)) * 12
+        while bass_note > voicing[0] - 5 and bass_note - 12 >= 24:
+            bass_note -= 12
+        if bass_on:
+            bass_events = [(0, chord_len, True)] if bass_mode == 0 else events
+            for off, ln, accent in bass_events:
+                jit = int((feel_rng.rand() - 0.5) * 2 * humanize * step * 0.08)
+                vel = base_vel * 0.95 * (1 + (feel_rng.rand() - 0.5) * 2 * humanize * 0.12)
+                add_note(bass_note, t0 + off + jit, ln - jit, vel, 3, group)
+
+        # Upper voicing
+        for off, ln, accent in events:
+            ev_jit = (feel_rng.rand() - 0.5) * 2 * humanize * step * 0.12
+            for k, note in enumerate(voicing):
+                strum_off = int(strum * step * 0.4 * k)
+                jit = int(ev_jit + (feel_rng.rand() - 0.5) * humanize * step * 0.06)
+                start = t0 + off + strum_off + jit
+                length = max(step // 4, ln - strum_off - jit)
+                vel = base_vel * (1 + (feel_rng.rand() - 0.5) * 2 * humanize * 0.18)
+                if k == len(voicing) - 1:
+                    vel += 0.05                  # let the top voice sing
+                elif k > 0:
+                    vel -= 0.03                  # softer inner voices
+                if accent and rhythm in PATTERNS:
+                    vel += 0.04
+                add_note(note, start, length, vel, 0, group)
+
+        if markers_on:
+            try:
+                m = flp.Marker()
+                m.time = max(0, t0)
+                m.name = name
+                flp.score.addMarker(m)
+            except Exception:
+                pass
