@@ -8,12 +8,18 @@ What's in this folder
   Install Soulful Sauce.command   installs the two plugins for you
 
 Install
-  1. Right-click "Install Soulful Sauce.command" and choose Open, then Open again.
-     (A double-click gets blocked the first time because this test build isn't
-     signed with a paid Apple developer account yet.)
+  1. Double-click "Install Soulful Sauce.command".
+     macOS blocks it the first time, because this test build isn't signed with a
+     paid Apple developer account yet. To allow it:
+       - macOS 15 Sequoia or newer: open System Settings > Privacy & Security,
+         scroll down, click "Open Anyway" next to the installer, then confirm.
+       - Older macOS: right-click the installer, choose Open, then Open again.
   2. A Terminal window shows where it installed the plugins. Press any key to close it.
   3. In FL Studio: Options > Manage plugins > Find more plugins.
   4. Add "Soulful Sauce" (Just Feezy) to a channel like any instrument.
+
+Quickest alternative: open Terminal and paste this (if the folder is in Downloads):
+  xattr -dr com.apple.quarantine ~/Downloads/"Soulful Sauce" && ~/Downloads/"Soulful Sauce"/"Install Soulful Sauce.command"
 
 If macOS still says the plugin "is damaged" or "can't be opened", open Terminal and run:
   xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/VST3/"Soulful Sauce.vst3"
