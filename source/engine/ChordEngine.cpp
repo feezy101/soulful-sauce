@@ -1,6 +1,7 @@
 #include "ChordEngine.h"
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <cstdlib>
 #include <limits>
